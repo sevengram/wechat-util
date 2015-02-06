@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import json
-
 import tornado.gen
 import tornado.httpclient
 
