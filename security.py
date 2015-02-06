@@ -41,7 +41,7 @@ def build_sign(data, key, method='md5'):
     if method == 'md5':
         p = [(k, v.decode('utf8')) if type(v) is str else
              (k, unicode(v))
-             for k, v in sorted(data.items()) if v and k != 'sign']
+             for k, v in sorted(data.iteritems()) if v and k != 'sign']
         return hashlib.md5(
             (u'&'.join([k + u'=' + v for k, v in p]) + u'&key=' + key).encode('utf8')).hexdigest().upper()
     elif method == 'sha1':

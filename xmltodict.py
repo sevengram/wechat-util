@@ -73,7 +73,7 @@ class _DictSAXHandler(object):
             if self.xml_attribs:
                 attrs = self.dict_constructor(
                     (self.attr_prefix + key, value)
-                    for (key, value) in attrs.items())
+                    for key, value in attrs.iteritems())
             else:
                 attrs = None
             self.item = attrs or None
@@ -234,7 +234,7 @@ def _emit(key, value, content_handler,
         cdata = None
         attrs = OrderedDict()
         children = []
-        for ik, iv in v.items():
+        for ik, iv in v.iteritems():
             if ik == cdata_key:
                 cdata = iv
                 continue
