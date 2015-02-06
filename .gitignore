@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# IDEA
+.idea
+
+# Temp Files
+*~
+*.swp
+*.tmp
+*.bak
+*.orig
+
