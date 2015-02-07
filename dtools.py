@@ -15,7 +15,7 @@ def transfer(src, copys=None, renames=None):
 
 
 def filter_data(src, nonblank=False, delkeys=None):
-    return {k: v for k, v in src.iteritems() if (not nonblank or v) and k not in (delkeys or [])}
+    return {k: v for k, v in src.iteritems() if (not nonblank or v) and k not in (delkeys or [])} if src else {}
 
 
 def special_decode(text):
