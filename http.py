@@ -4,6 +4,7 @@ import json
 
 import tornado.gen
 import tornado.httpclient
+import tornado.httputil
 
 from util import dtools
 
@@ -16,26 +17,30 @@ type_methods = {
 
 
 @tornado.gen.coroutine
-def _send_dict(url, data, data_type, method):
+def _send_dict(url, method, data, data_type, headers):
+    _headers = headers or {}
+    if data_type == 'form':
+        _headers['Content-Type'] = 'application/x-www-form-urlencoded'
     client = tornado.httpclient.AsyncHTTPClient()
     req = tornado.httpclient.HTTPRequest(
         url=url,
         method=method,
-        body=type_methods.get(data_type)(data)
+        body=type_methods.get(data_type)(data),
+        headers=tornado.httputil.HTTPHeaders(_headers)
     )
     resp = yield client.fetch(req)
     raise tornado.gen.Return(resp)
 
 
 @tornado.gen.coroutine
-def post_dict(url, data, data_type='form'):
-    resp = yield _send_dict(url, data, data_type, method='POST')
+def post_dict(url, data, data_type='form', headers=None):
+    resp = yield _send_dict(url, 'POST', data, data_type, headers)
     raise tornado.gen.Return(resp)
 
 
 @tornado.gen.coroutine
-def put_dict(url, data, data_type='form'):
-    resp = yield _send_dict(url, data, data_type, method='PUT')
+def put_dict(url, data, data_type='form', headers=None):
+    resp = yield _send_dict(url, 'PUT', data, data_type, headers)
     raise tornado.gen.Return(resp)
 
 
