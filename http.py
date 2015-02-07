@@ -16,14 +16,26 @@ type_methods = {
 
 
 @tornado.gen.coroutine
-def post_dict(url, data, data_type='form'):
+def _send_dict(url, data, data_type, method):
     client = tornado.httpclient.AsyncHTTPClient()
     req = tornado.httpclient.HTTPRequest(
         url=url,
-        method='POST',
+        method=method,
         body=type_methods.get(data_type)(data)
     )
     resp = yield client.fetch(req)
+    raise tornado.gen.Return(resp)
+
+
+@tornado.gen.coroutine
+def post_dict(url, data, data_type='form'):
+    resp = yield _send_dict(url, data, data_type, method='POST')
+    raise tornado.gen.Return(resp)
+
+
+@tornado.gen.coroutine
+def put_dict(url, data, data_type='form'):
+    resp = yield _send_dict(url, data, data_type, method='PUT')
     raise tornado.gen.Return(resp)
 
 
