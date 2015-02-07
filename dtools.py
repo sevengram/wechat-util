@@ -5,13 +5,14 @@ import urllib
 from util import xmltodict
 
 
-def transfer(src, copys=None, renames=None):
+def transfer(src, copys=None, renames=None, nonblank=False):
     if not src:
         return {}
     else:
         r1 = {key: src.get(key, '') for key in (copys or [])}
         r2 = {new_key: src.get(key, '') for key, new_key in (renames or [])}
-        return dict(r1, **r2)
+        result = dict(r1, **r2)
+        return {k: v for k, v in result.iteritems() if v} if nonblank else result
 
 
 def filter_data(src, nonblank=False, delkeys=None):
