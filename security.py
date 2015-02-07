@@ -55,3 +55,7 @@ def build_sign(data, key, method='md5'):
 def add_sign(data, key, method='md5'):
     data['nonce_str'] = nonce_str()
     data['sign'] = build_sign(data, key, method)
+
+
+def get_uid(appid, openid):
+    return hashlib.md5(appid + '_' + openid).hexdigest()
