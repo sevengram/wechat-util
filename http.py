@@ -12,7 +12,8 @@ from util import dtools
 type_methods = {
     'json': json.dumps,
     'xml': dtools.dict2xml,
-    'form': dtools.urlencode
+    'form': dtools.urlencode,
+    'raw': lambda a: a
 }
 
 
