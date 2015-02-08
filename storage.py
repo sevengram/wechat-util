@@ -4,7 +4,7 @@ import hashlib
 
 import MySQLdb
 import MySQLdb.cursors
-import sys
+
 from util.dtools import not_empty
 
 
@@ -77,10 +77,8 @@ class Storage(object):
         update_holders = ', '.join(map(lambda n: n + '=%s', update_dict.keys()))
         where_dict = {k: v for k, v in filter_data.iteritems() if not_empty(v)}
         if where_dict:
-            where_holders = ', '.join(map(lambda n: n + '=%s', where_dict.keys()))
+            where_holders = ' AND '.join(map(lambda n: n + '=%s', where_dict.keys()))
             request = 'UPDATE %s SET %s WHERE %s' % (table, update_holders, where_holders)
-            print request
-            sys.stdout.flush()
             self.execute(request, update_dict.values() + where_dict.values())
 
     def replace(self, table, data, noninsert=None, nonupdate=None):
