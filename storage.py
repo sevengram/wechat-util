@@ -4,12 +4,13 @@ import hashlib
 
 import MySQLdb
 import MySQLdb.cursors
+from util.dtools import not_empty
 
 
 def get_redis_key(table, data, keys):
     p = [(k, v.decode('utf8')) if type(v) is str else
          (k, unicode(v))
-         for k, v in sorted(data.items()) if v and k in keys]
+         for k, v in sorted(data.items()) if not_empty(v) and k in keys]
     return hashlib.md5(
         table + ':' + '&'.join([(k + u'=' + v).encode('utf8') for k, v in p])).hexdigest().upper()
 
@@ -48,7 +49,7 @@ class Storage(object):
             return result
 
     def get(self, table, queries, select_key='*'):
-        queries = {k: v for k, v in queries.iteritems() if v}
+        queries = {k: v for k, v in queries.iteritems() if not_empty(v)}
         if not queries:
             return None
         placeholders = ' and '.join(map(lambda n: n + '=%s', queries.keys()))
@@ -73,7 +74,7 @@ class Storage(object):
     def update(self, table, data, filter_data, nonupdate=None):
         update_dict = {k: v for k, v in data.iteritems() if k not in (nonupdate or [])}
         update_holders = ', '.join(map(lambda n: n + '=%s', update_dict.keys()))
-        where_dict = {k: v for k, v in filter_data.iteritems() if v}
+        where_dict = {k: v for k, v in filter_data.iteritems() if not_empty(v)}
         if where_dict:
             where_holders = ', '.join(map(lambda n: n + '=%s', where_dict.keys()))
             request = 'UPDATE %s SET %s WHERE %s' % (table, update_holders, where_holders)

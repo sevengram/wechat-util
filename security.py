@@ -5,6 +5,8 @@ import hashlib
 import random
 from Crypto.Cipher import AES
 
+from util.dtools import not_empty
+
 
 block_size = AES.block_size
 pad = lambda s: s + (block_size - len(s) % block_size) * chr(block_size - len(s) % block_size)
@@ -41,7 +43,7 @@ def build_sign(data, key, method='md5'):
     if method == 'md5':
         p = [(k, v.decode('utf8')) if type(v) is str else
              (k, unicode(v))
-             for k, v in sorted(data.iteritems()) if v and k != 'sign']
+             for k, v in sorted(data.iteritems()) if not_empty(v) and k != 'sign']
         return hashlib.md5(
             (u'&'.join([k + u'=' + v for k, v in p]) + u'&key=' + key).encode('utf8')).hexdigest().upper()
     elif method == 'sha1':
@@ -59,3 +61,11 @@ def add_sign(data, key, method='md5'):
 
 def get_uid(appid, openid):
     return hashlib.md5(appid + '_' + openid).hexdigest()
+
+
+def get_phone_code(openid, phone, magic_str=''):
+    if not magic_str:
+        magic_str = str(random.random())[-2:]
+    s1 = '%02d' % ((int(hashlib.md5(openid + magic_str).hexdigest()[:4], 16) + 123) % 100)
+    s2 = '%02d' % ((int(hashlib.md5(phone + magic_str).hexdigest()[:4], 16) + 321) % 100)
+    return s1 + s2 + magic_str
