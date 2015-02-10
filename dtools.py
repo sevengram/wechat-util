@@ -16,8 +16,13 @@ def transfer(src, copys=None, renames=None, nonblank=False):
 
 
 def filter_data(src, nonblank=False, delkeys=None):
-    return {k: v for k, v in src.iteritems() if
-            (not nonblank or not_empty(v)) and k not in (delkeys or [])} if src else {}
+    if type(src) is list:
+        return [filter_data(d, nonblank, delkeys) for d in src]
+    elif type(src) is dict:
+        return {k: v for k, v in src.iteritems() if
+                (not nonblank or not_empty(v)) and k not in (delkeys or [])} if src else {}
+    else:
+        return src
 
 
 def special_decode(text):
