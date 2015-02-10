@@ -92,16 +92,14 @@ class Storage(object):
         values = equal_queries.values() + list(
             chain.from_iterable(open_range_queries.values() + close_range_queries.values()))
         count_request = 'SELECT count(1) AS `total` FROM %s %s' % (table, where_clause)
-        print count_request
         records = self.execute(count_request, values)
         total = records['total'] if records else 0
         if total:
             request = 'SELECT %s FROM %s %s LIMIT %s,%s' % (
                 select_key, table, where_clause, page_no * page_size, page_size)
-            print request
-            return {'total': total, 'list': self.fetch_all(request, values)}
+            return total, self.fetch_all(request, values)
         else:
-            return {'total': 0, 'list': []}
+            return 0, []
 
     def set(self, table, data, noninsert=None, nonblank=False):
         insert_dict = {k: v for k, v in data.iteritems()
