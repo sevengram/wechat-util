@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import hashlib
+from itertools import chain
 
 import MySQLdb
 import MySQLdb.cursors
@@ -49,21 +50,58 @@ class Storage(object):
             cursor.close()
             return result
 
+    def fetch_all(self, query, args, cursorclass=MySQLdb.cursors.DictCursor):
+        cursor = self.connection.cursor(cursorclass)
+        result = None
+        try:
+            cursor.execute(query, args)
+            result = cursor.fetchall()
+        except (AttributeError, MySQLdb.OperationalError):
+            self.connection.close()
+            self.connect()
+            cursor = self.connection.cursor(cursorclass)
+            cursor.execute(query, args)
+            result = cursor.fetchall()
+        finally:
+            cursor.close()
+            return list(result or '')
+
     def get(self, table, queries, select_key='*'):
         queries = {k: v for k, v in queries.iteritems() if not_empty(v)}
         if not queries:
             return None
-        placeholders = ' and '.join(map(lambda n: n + '=%s', queries.keys()))
+        placeholders = ' AND '.join(map(lambda n: n + '=%s', queries.keys()))
         request = 'SELECT %s FROM %s WHERE %s' % (select_key, table, placeholders)
         records = self.execute(request, queries.values())
         if not records:
             return None
         else:
-            if select_key == '*':
-                return {k: v.decode('utf8') if type(v) is str else v for k, v in records.iteritems()}
-            else:
-                result = records.get(select_key)
-                return result.decode('utf8') if type(result) is str else result
+            return records if select_key == '*' else records.get(select_key)
+
+    def get_page_list(self, table, queries, page_no, page_size, select_key='*'):
+        equal_queries = {k: v for k, v in queries.iteritems() if
+                         not_empty(v) and type(v) is not tuple and type(v) is not list}
+        open_range_queries = {k: v for k, v in queries.iteritems() if type(v) is tuple and len(v) == 2}
+        close_range_queries = {k: v for k, v in queries.iteritems() if type(v) is list and len(v) == 2}
+        conditions = \
+            map(lambda k: k + '=%s', equal_queries.keys()) + \
+            map(lambda k: '%s < ' + k + ' AND ' + k + ' < %s', open_range_queries.keys()) + \
+            map(lambda k: '%s <= ' + k + ' AND ' + k + ' <= %s', close_range_queries.keys())
+        placeholders = ' AND '.join(conditions)
+        where_clause = ' WHERE ' + placeholders if placeholders else ''
+        values = equal_queries.values() + list(
+            chain.from_iterable(open_range_queries.values() + close_range_queries.values()))
+        count_request = 'SELECT count(1) AS `total` FROM %s %s' % (table, where_clause)
+        print count_request
+        records = self.execute(count_request, values)
+        total = records['total'] if records else 0
+        if total:
+            request = 'SELECT %s FROM %s %s LIMIT %s,%s' % (
+                select_key, table, where_clause, page_no * page_size, page_size)
+            print request
+            return {'total': total, 'list': self.fetch_all(request, values)}
+        else:
+            return {'total': 0, 'list': []}
 
     def set(self, table, data, noninsert=None, nonblank=False):
         insert_dict = {k: v for k, v in data.iteritems()
