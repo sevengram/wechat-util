@@ -34,7 +34,7 @@ def check_sign(data, key, method):
         nonce_key = 'nonce'
     else:
         return False
-    if not sign or not nonce_key in data:
+    if not sign or nonce_key not in data:
         return False
     return build_sign(data, key, method) == sign
 
