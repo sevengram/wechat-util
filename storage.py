@@ -101,31 +101,31 @@ class Storage(object):
         else:
             return 0, []
 
-    def set(self, table, data, noninsert=None, nonblank=False):
+    def set(self, table, data, noninsert=None, allow_empty=True):
         insert_dict = {k: v for k, v in data.iteritems()
-                       if (not nonblank or not_empty(v)) and k not in (noninsert or [])}
+                       if (allow_empty or not_empty(v)) and k not in (noninsert or [])}
         columns = ', '.join(insert_dict.keys())
         insert_holders = ', '.join(['%s'] * len(insert_dict))
         request = 'INSERT INTO %s (%s) VALUES (%s)' % (table, columns, insert_holders)
         self.execute(request, insert_dict.values())
 
-    def update(self, table, data, filter_data, nonupdate=None, nonblank=False):
+    def update(self, table, data, filters, nonupdate=None, allow_empty=True):
         update_dict = {k: v for k, v in data.iteritems()
-                       if (not nonblank or not_empty(v)) and k not in (nonupdate or [])}
+                       if (allow_empty or not_empty(v)) and k not in (nonupdate or [])}
         update_holders = ', '.join(map(lambda n: n + '=%s', update_dict.keys()))
-        where_dict = {k: v for k, v in filter_data.iteritems() if not_empty(v)}
+        where_dict = {k: v for k, v in filters.iteritems() if not_empty(v)}
         if where_dict:
             where_holders = ' AND '.join(map(lambda n: n + '=%s', where_dict.keys()))
             request = 'UPDATE %s SET %s WHERE %s' % (table, update_holders, where_holders)
             self.execute(request, update_dict.values() + where_dict.values())
 
-    def replace(self, table, data, noninsert=None, nonupdate=None, nonblank=False):
+    def replace(self, table, data, noninsert=None, nonupdate=None, allow_empty=True):
         insert_dict = {k: v for k, v in data.iteritems()
-                       if (not nonblank or not_empty(v)) and k not in (noninsert or [])}
+                       if (allow_empty or not_empty(v)) and k not in (noninsert or [])}
         columns = ', '.join(insert_dict.keys())
         insert_holders = ', '.join(['%s'] * len(insert_dict))
         update_dict = {k: v for k, v in insert_dict.iteritems()
-                       if (not nonblank or not_empty(v)) and k not in (nonupdate or [])}
+                       if (allow_empty or not_empty(v)) and k not in (nonupdate or [])}
         update_holders = ', '.join(map(lambda n: n + '=%s', update_dict.keys()))
         request = 'INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s' % (
             table, columns, insert_holders, update_holders)
