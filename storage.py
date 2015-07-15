@@ -29,22 +29,21 @@ class Storage(object):
         self.connection = MySQLdb.connect(
             user=self.db_usr, passwd=self.db_pwd, host=self.db_host, db=self.db_name, charset='utf8')
 
-    def execute(self, query, args, cursorclass=MySQLdb.cursors.DictCursor):
-        need_commit = query.lower().startswith('update')
+    def execute(self, query, args, cursorclass=MySQLdb.cursors.DictCursor, commit=False):
         cursor = self.connection.cursor(cursorclass)
         result = None
         try:
             cursor.execute(query, args)
-            if need_commit:
-                cursor.commit()
+            if commit:
+                self.connection.commit()
             result = cursor.fetchone()
-        except (AttributeError, MySQLdb.OperationalError):
+        except (AttributeError, MySQLdb.OperationalError), e:
             self.connection.close()
             self.connect()
             cursor = self.connection.cursor(cursorclass)
             cursor.execute(query, args)
-            if need_commit:
-                cursor.commit()
+            if commit:
+                self.connection.commit()
             result = cursor.fetchone()
         finally:
             cursor.close()
@@ -101,32 +100,31 @@ class Storage(object):
         else:
             return 0, []
 
-    def set(self, table, data, noninsert=None, allow_empty=True):
-        insert_dict = {k: v for k, v in data.iteritems()
-                       if (allow_empty or not_empty(v)) and k not in (noninsert or [])}
+    def set(self, table, data, noninsert=None):
+        insert_dict = {k: v for k, v in data.iteritems() if k not in (noninsert or [])}
         columns = ', '.join(insert_dict.keys())
         insert_holders = ', '.join(['%s'] * len(insert_dict))
         request = 'INSERT INTO %s (%s) VALUES (%s)' % (table, columns, insert_holders)
-        self.execute(request, insert_dict.values())
+        self.execute(request, insert_dict.values(), commit=True)
 
-    def update(self, table, data, filters, nonupdate=None, allow_empty=True):
+    def update(self, table, data, filters, nonupdate=None):
         update_dict = {k: v for k, v in data.iteritems()
-                       if (allow_empty or not_empty(v)) and k not in (nonupdate or [])}
+                       if not_empty(v) and k not in (nonupdate or [])}
         update_holders = ', '.join(map(lambda n: n + '=%s', update_dict.keys()))
         where_dict = {k: v for k, v in filters.iteritems() if not_empty(v)}
         if where_dict:
             where_holders = ' AND '.join(map(lambda n: n + '=%s', where_dict.keys()))
             request = 'UPDATE %s SET %s WHERE %s' % (table, update_holders, where_holders)
-            self.execute(request, update_dict.values() + where_dict.values())
+            self.execute(request, update_dict.values() + where_dict.values(), commit=True)
 
-    def replace(self, table, data, noninsert=None, nonupdate=None, allow_empty=True):
+    def replace(self, table, data, noninsert=None, nonupdate=None):
         insert_dict = {k: v for k, v in data.iteritems()
-                       if (allow_empty or not_empty(v)) and k not in (noninsert or [])}
+                       if not_empty(v) and k not in (noninsert or [])}
         columns = ', '.join(insert_dict.keys())
         insert_holders = ', '.join(['%s'] * len(insert_dict))
         update_dict = {k: v for k, v in insert_dict.iteritems()
-                       if (allow_empty or not_empty(v)) and k not in (nonupdate or [])}
+                       if not_empty(v) and k not in (nonupdate or [])}
         update_holders = ', '.join(map(lambda n: n + '=%s', update_dict.keys()))
         request = 'INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s' % (
             table, columns, insert_holders, update_holders)
-        self.execute(request, insert_dict.values() + update_dict.values())
+        self.execute(request, insert_dict.values() + update_dict.values(), commit=True)

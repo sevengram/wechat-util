@@ -12,17 +12,7 @@ def transfer(src, copys=None, renames=None, allow_empty=True):
         r1 = {key: src.get(key, '') for key in (copys or [])}
         r2 = {new_key: src.get(key, '') for key, new_key in (renames or [])}
         result = dict(r1, **r2)
-        return {k: v for k, v in result.iteritems() if not_empty(v)} if not allow_empty else result
-
-
-def filter_data(src, allow_empty=True, delkeys=None):
-    if type(src) is list:
-        return [filter_data(d, allow_empty, delkeys) for d in src]
-    elif type(src) is dict:
-        return {k: (v or '') for k, v in src.iteritems()
-                if (allow_empty or not_empty(v)) and k not in (delkeys or [])} if src else {}
-    else:
-        return src
+        return {k: v for k, v in result.iteritems() if allow_empty or not_empty(v)}
 
 
 def special_decode(text):
