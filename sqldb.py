@@ -17,7 +17,7 @@ def get_redis_key(table, data, keys):
         table + ':' + '&'.join([(k + u'=' + v).encode('utf8') for k, v in p])).hexdigest().upper()
 
 
-class Storage(object):
+class Sqldb(object):
     def __init__(self, db_name, db_host, db_user, db_pwd):
         self.db_usr = db_user
         self.db_pwd = db_pwd
