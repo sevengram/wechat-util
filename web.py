@@ -21,11 +21,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 raise tornado.web.HTTPError(400)
         return dict(r1, **r2)
 
-    def get_check_key(self, refer_dict):
-        raise NotImplementedError()
-
-    def check_signature(self, refer_dict, method):
-        sign_key = self.get_check_key(refer_dict)
+    def check_signature(self, refer_dict, sign_key, method):
         if not sign_key:
             self.send_response(err_code=8002)
             return False
