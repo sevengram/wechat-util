@@ -90,7 +90,7 @@ class Sqldb(object):
         where_clause = ' WHERE ' + placeholders if placeholders else ''
         values = equal_queries.values() + list(
             chain.from_iterable(open_range_queries.values() + close_range_queries.values()))
-        count_request = 'SELECT count(1) AS `total` FROM %s %s' % (table, where_clause)
+        count_request = 'SELECT count(1) AS total FROM %s %s' % (table, where_clause)
         records = self.execute(count_request, values)
         total = records['total'] if records else 0
         if total:
