@@ -39,3 +39,6 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def write_error(self, status_code, **kwargs):
         self.write({'err_code': status_code})
+
+    def data_received(self, chunk):
+        pass
