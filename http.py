@@ -2,6 +2,7 @@
 
 import json
 import mimetypes
+import urllib
 
 import tornado.gen
 import tornado.httpclient
@@ -72,6 +73,10 @@ def get_dict(url, data, headers=None, proxy_host=None, proxy_port=None):
 
 def get_content_type(filename):
     return mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+
+
+def build_url(base_url, params):
+    return base_url + '?' + urllib.urlencode(params)
 
 
 def encode_multipart_formdata(fields, files):
