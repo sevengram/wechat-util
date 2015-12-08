@@ -35,6 +35,7 @@ def _send_dict(url, method, data, data_type, headers, proxy_host, proxy_port):
         method=method,
         body=type_methods.get(data_type)(data),
         headers=tornado.httputil.HTTPHeaders(_headers),
+        validate_cert=False,
         proxy_host=proxy_host,
         proxy_port=proxy_port
     )
@@ -64,6 +65,7 @@ def get_dict(url, data, headers=None, proxy_host=None, proxy_port=None):
         url=url + '?' + dtools.urlencode(data),
         method='GET',
         headers=tornado.httputil.HTTPHeaders(headers or {}),
+        validate_cert=False,
         proxy_host=proxy_host,
         proxy_port=proxy_port
     )
