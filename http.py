@@ -21,26 +21,58 @@ type_methods = {
 }
 
 
-@tornado.gen.coroutine
-def _send_dict(url, method, data, data_type, headers, proxy_host, proxy_port):
+def build_get_req(url, data, headers=None, proxy_host=None, proxy_port=None):
+    return tornado.httpclient.HTTPRequest(
+        url=url + '?' + dtools.urlencode(data) if data else url,
+        method='GET',
+        headers=tornado.httputil.HTTPHeaders(headers or {}),
+        validate_cert=False,
+        proxy_host=proxy_host,
+        proxy_port=proxy_port,
+        connect_timeout=120,
+        request_timeout=120
+    )
+
+
+def build_post_req(url, method, body, headers=None, proxy_host=None, proxy_port=None):
+    return tornado.httpclient.HTTPRequest(
+        url=url,
+        method=method,
+        body=body,
+        headers=tornado.httputil.HTTPHeaders(headers or {}),
+        validate_cert=False,
+        proxy_host=proxy_host,
+        proxy_port=proxy_port,
+        connect_timeout=120,
+        request_timeout=120
+    )
+
+
+def _send_dict_sync(url, method, data, data_type, headers=None, proxy_host=None, proxy_port=None):
     _headers = headers or {}
     if data_type == 'form':
         _headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+    body = type_methods.get(data_type)(data)
+    client = tornado.httpclient.HTTPClient()
+    return client.fetch(build_post_req(url, method, body, _headers, proxy_host, proxy_port))
+
+
+@tornado.gen.coroutine
+def _send_dict(url, method, data, data_type, headers=None, proxy_host=None, proxy_port=None):
+    _headers = headers or {}
+    if data_type == 'form':
+        _headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+    body = type_methods.get(data_type)(data)
     if not proxy_host:
         client = tornado.httpclient.AsyncHTTPClient()
     else:
         client = tornado.curl_httpclient.CurlAsyncHTTPClient()
-    req = tornado.httpclient.HTTPRequest(
-        url=url,
-        method=method,
-        body=type_methods.get(data_type)(data),
-        headers=tornado.httputil.HTTPHeaders(_headers),
-        validate_cert=False,
-        proxy_host=proxy_host,
-        proxy_port=proxy_port
-    )
-    resp = yield client.fetch(req)
+    resp = yield client.fetch(build_post_req(url, method, body, _headers, proxy_host, proxy_port))
     raise tornado.gen.Return(resp)
+
+
+def post_dict_sync(url, data, data_type='form', headers=None, proxy_host=None, proxy_port=None):
+    return _send_dict_sync(url, 'POST', data, data_type, headers, proxy_host, proxy_port)
 
 
 @tornado.gen.coroutine
@@ -49,27 +81,28 @@ def post_dict(url, data, data_type='form', headers=None, proxy_host=None, proxy_
     raise tornado.gen.Return(resp)
 
 
+def put_dict_sync(url, data, data_type='form', headers=None, proxy_host=None, proxy_port=None):
+    return _send_dict_sync(url, 'PUT', data, data_type, headers, proxy_host, proxy_port)
+
+
 @tornado.gen.coroutine
 def put_dict(url, data, data_type='form', headers=None, proxy_host=None, proxy_port=None):
     resp = yield _send_dict(url, 'PUT', data, data_type, headers, proxy_host, proxy_port)
     raise tornado.gen.Return(resp)
 
 
+def get_dict_sync(url, data=None, headers=None, proxy_host=None, proxy_port=None):
+    client = tornado.httpclient.HTTPClient()
+    return client.fetch(build_get_req(url, data, headers, proxy_host, proxy_port))
+
+
 @tornado.gen.coroutine
-def get_dict(url, data, headers=None, proxy_host=None, proxy_port=None):
+def get_dict(url, data=None, headers=None, proxy_host=None, proxy_port=None):
     if not proxy_host:
         client = tornado.httpclient.AsyncHTTPClient()
     else:
         client = tornado.curl_httpclient.CurlAsyncHTTPClient()
-    req = tornado.httpclient.HTTPRequest(
-        url=url + '?' + dtools.urlencode(data),
-        method='GET',
-        headers=tornado.httputil.HTTPHeaders(headers or {}),
-        validate_cert=False,
-        proxy_host=proxy_host,
-        proxy_port=proxy_port
-    )
-    resp = yield client.fetch(req)
+    resp = yield client.fetch(build_get_req(url, data, headers, proxy_host, proxy_port))
     raise tornado.gen.Return(resp)
 
 
