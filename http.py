@@ -118,18 +118,17 @@ def encode_multipart_formdata(fields, files):
     boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
     crlf = '\r\n'
     l = []
-    for (key, value) in fields:
+    for key, value in fields.iteritems():
         l.append('--' + boundary)
         l.append('Content-Disposition: form-data; name="%s"' % key)
         l.append('')
         l.append(value)
-    for (key, filename, value) in files:
-        l.append('--' + boundary)
-        l.append('Content-Disposition: form-data; name="%s"; filename="%s"' %
-                 (key, filename.split('/')[-1]))
-        l.append('Content-Type: %s' % get_content_type(filename))
-        l.append('')
-        l.append(value)
+    filename, value = files
+    l.append('--' + boundary)
+    l.append('Content-Disposition: form-data; name="file"; filename="%s"' % filename)
+    l.append('Content-Type: %s' % get_content_type(filename))
+    l.append('')
+    l.append(value)
     l.append('--' + boundary + '--')
     l.append('')
     body = crlf.join(l)
