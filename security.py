@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import logging
 import random
 import socket
 import string
@@ -103,19 +104,22 @@ class Prpcrypt(object):
         @param appid: AppID
         @return: 加密得到的字符串
         """
+        text = text.encode('utf8')
         # 16位随机字符串添加到明文开头
-        text = self.get_random_str() + struct.pack("I", socket.htonl(len(text))) + text + appid
+        try:
+            a = self.get_random_str() + struct.pack("I", socket.htonl(len(text)))
+            text = a + text + appid
+        except Exception, e:
+            logging.exception("error!!")
+
         # 使用自定义的填充方式对明文进行补位填充
         pkcs7 = PKCS7Encoder()
         text = pkcs7.encode(text)
         # 加密
         cryptor = AES.new(self.key, self.mode, self.key[:16])
-        try:
-            ciphertext = cryptor.encrypt(text)
-            # 使用BASE64对加密后的字符串进行编码
-            return base64.b64encode(ciphertext)
-        except Exception:
-            return None
+        ciphertext = cryptor.encrypt(text)
+        # 使用BASE64对加密后的字符串进行编码
+        return base64.b64encode(ciphertext)
 
     def decrypt(self, text, appid):
         """
