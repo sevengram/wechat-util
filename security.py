@@ -3,22 +3,12 @@
 import base64
 import hashlib
 import random
+import socket
+import string
+import struct
 from Crypto.Cipher import AES
 
 from util.dtools import not_empty
-
-
-block_size = AES.block_size
-pad = lambda s: s + (block_size - len(s) % block_size) * chr(block_size - len(s) % block_size)
-unpad = lambda s: s[0:-ord(s[-1])]
-
-
-def encrypt(plain, *args):
-    return base64.b64encode(AES.new(pad((''.join(args) * 11)[::-3][:29])).encrypt(pad(plain)))
-
-
-def decrypt(cipher, *args):
-    return unpad(AES.new(pad((''.join(args) * 11)[::-3][:29])).decrypt(base64.b64decode(cipher)))
 
 
 def nonce_str():
@@ -59,13 +49,104 @@ def add_sign(data, key, method='md5'):
     data['sign'] = build_sign(data, key, method)
 
 
-def get_uid(appid, openid):
-    return hashlib.md5(appid + '_' + openid).hexdigest()
-
-
 def get_phone_code(openid, phone, magic_str=''):
     if not magic_str:
         magic_str = str(random.random())[-2:]
     s1 = '%02d' % ((int(hashlib.md5(openid + magic_str).hexdigest()[:4], 16) + 123) % 100)
     s2 = '%02d' % ((int(hashlib.md5(phone + magic_str).hexdigest()[:4], 16) + 321) % 100)
     return s1 + s2 + magic_str
+
+
+class PKCS7Encoder():
+    """提供基于PKCS7算法的加解密接口"""
+
+    block_size = 32
+
+    def encode(self, text):
+        """ 对需要加密的明文进行填充补位
+        @param text: 需要进行填充补位操作的明文
+        @return: 补齐明文字符串
+        """
+        text_length = len(text)
+        # 计算需要填充的位数
+        amount_to_pad = self.block_size - (text_length % self.block_size)
+        if amount_to_pad == 0:
+            amount_to_pad = self.block_size
+        # 获得补位所用的字符
+        pad = chr(amount_to_pad)
+        return text + pad * amount_to_pad
+
+    def decode(self, decrypted):
+        """
+        删除解密后明文的补位字符
+        @param decrypted: 解密后的明文
+        @return: 删除补位字符后的明文
+        """
+        pad = ord(decrypted[-1])
+        if pad < 1 or pad > 32:
+            pad = 0
+        return decrypted[:-pad]
+
+
+class Prpcrypt(object):
+    """提供接收和推送给公众平台消息的加解密接口"""
+
+    def __init__(self, key):
+        self.key = base64.b64decode(key + "=")
+        # 设置加解密模式为AES的CBC模式
+        self.mode = AES.MODE_CBC
+
+    def encrypt(self, text, appid):
+        """
+        对明文进行加密
+        @param text: 需要加密的明文
+        @param appid: AppID
+        @return: 加密得到的字符串
+        """
+        # 16位随机字符串添加到明文开头
+        text = self.get_random_str() + struct.pack("I", socket.htonl(len(text))) + text + appid
+        # 使用自定义的填充方式对明文进行补位填充
+        pkcs7 = PKCS7Encoder()
+        text = pkcs7.encode(text)
+        # 加密
+        cryptor = AES.new(self.key, self.mode, self.key[:16])
+        try:
+            ciphertext = cryptor.encrypt(text)
+            # 使用BASE64对加密后的字符串进行编码
+            return base64.b64encode(ciphertext)
+        except Exception:
+            return None
+
+    def decrypt(self, text):
+        """
+        对解密后的明文进行补位删除
+        @param text: 密文
+        @return: 删除填充补位后的明文
+        """
+        try:
+            cryptor = AES.new(self.key, self.mode, self.key[:16])
+            # 使用BASE64对密文进行解码，然后AES-CBC解密
+            plain_text = cryptor.decrypt(base64.b64decode(text))
+        except Exception:
+            return None
+        try:
+            pad = ord(plain_text[-1])
+            # 去掉补位字符串
+            # pkcs7 = PKCS7Encoder()
+            # plain_text = pkcs7.encode(plain_text)
+            # 去除16位随机字符串
+            content = plain_text[16:-pad]
+            xml_len = socket.ntohl(struct.unpack("I", content[: 4])[0])
+            xml_content = content[4: xml_len + 4]
+            from_appid = content[xml_len + 4:]
+        except Exception:
+            return None
+        return xml_content
+
+    def get_random_str(self):
+        """
+        随机生成16位字符串
+        @return: 16位字符串
+        """
+        rule = string.letters + string.digits
+        return "".join(random.sample(rule, 16))
