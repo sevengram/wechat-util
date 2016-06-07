@@ -9,6 +9,8 @@ import string
 import struct
 from Crypto.Cipher import AES
 
+import time
+
 from util.dtools import not_empty
 
 
@@ -38,7 +40,7 @@ def build_sign(data, key, method='md5'):
         return hashlib.md5(
             (u'&'.join([k + u'=' + v for k, v in p]) + u'&key=' + key).encode('utf8')).hexdigest().upper()
     elif method == 'sha1':
-        p = [key, data.get('timestamp', ''), data.get('nonce', '')]
+        p = [key, data.get('timestamp', ''), data.get('nonce', ''), data.get('encrypt', '')]
         p.sort()
         return hashlib.sha1(''.join(p)).hexdigest()
     else:
@@ -48,6 +50,12 @@ def build_sign(data, key, method='md5'):
 def add_sign(data, key, method='md5'):
     data['nonce_str'] = nonce_str()
     data['sign'] = build_sign(data, key, method)
+
+
+def add_sign_wechat(data, key):
+    data['nonce'] = nonce_str()
+    data['timestamp'] = str(int(time.time()))
+    data['sign'] = build_sign(data, key, 'sha1')
 
 
 def get_phone_code(openid, phone, magic_str=''):
@@ -105,13 +113,9 @@ class Prpcrypt(object):
         @return: 加密得到的字符串
         """
         text = text.encode('utf8')
+        appid = appid.encode('utf8')
         # 16位随机字符串添加到明文开头
-        try:
-            a = self.get_random_str() + struct.pack("I", socket.htonl(len(text)))
-            text = a + text + appid
-        except Exception, e:
-            logging.exception("error!!")
-
+        text = self.get_random_str() + struct.pack("I", socket.htonl(len(text))) + text + appid
         # 使用自定义的填充方式对明文进行补位填充
         pkcs7 = PKCS7Encoder()
         text = pkcs7.encode(text)
@@ -128,24 +132,19 @@ class Prpcrypt(object):
         @param appid: AppID
         @return: 删除填充补位后的明文
         """
-        try:
-            cryptor = AES.new(self.key, self.mode, self.key[:16])
-            # 使用BASE64对密文进行解码，然后AES-CBC解密
-            plain_text = cryptor.decrypt(base64.b64decode(text))
-        except Exception:
-            return None
-        try:
-            pad = ord(plain_text[-1])
-            # 去掉补位字符串
-            # pkcs7 = PKCS7Encoder()
-            # plain_text = pkcs7.encode(plain_text)
-            # 去除16位随机字符串
-            content = plain_text[16:-pad]
-            xml_len = socket.ntohl(struct.unpack("I", content[: 4])[0])
-            xml_content = content[4: xml_len + 4]
-            from_appid = content[xml_len + 4:]
-        except Exception:
-            return None
+        cryptor = AES.new(self.key, self.mode, self.key[:16])
+        # 使用BASE64对密文进行解码，然后AES-CBC解密
+        plain_text = cryptor.decrypt(base64.b64decode(text))
+
+        pad = ord(plain_text[-1])
+        # 去掉补位字符串
+        # pkcs7 = PKCS7Encoder()
+        # plain_text = pkcs7.encode(plain_text)
+        # 去除16位随机字符串
+        content = plain_text[16:-pad]
+        xml_len = socket.ntohl(struct.unpack("I", content[: 4])[0])
+        xml_content = content[4: xml_len + 4]
+        from_appid = content[xml_len + 4:]
         if from_appid != appid:
             return None
         return xml_content
