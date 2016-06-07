@@ -117,10 +117,11 @@ class Prpcrypt(object):
         except Exception:
             return None
 
-    def decrypt(self, text):
+    def decrypt(self, text, appid):
         """
         对解密后的明文进行补位删除
         @param text: 密文
+        @param appid: AppID
         @return: 删除填充补位后的明文
         """
         try:
@@ -140,6 +141,8 @@ class Prpcrypt(object):
             xml_content = content[4: xml_len + 4]
             from_appid = content[xml_len + 4:]
         except Exception:
+            return None
+        if from_appid != appid:
             return None
         return xml_content
 
