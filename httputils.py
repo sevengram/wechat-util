@@ -3,11 +3,12 @@
 import json
 import mimetypes
 import urllib
+import urllib.parse
 
+import tornado.curl_httpclient
 import tornado.gen
 import tornado.httpclient
 import tornado.httputil
-import tornado.curl_httpclient
 
 from util import dtools
 
@@ -16,14 +17,14 @@ user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Ge
 type_methods = {
     'json': json.dumps,
     'xml': dtools.dict2xml,
-    'form': dtools.urlencode,
+    'form': urllib.parse.urlencode,
     'raw': lambda a: a
 }
 
 
 def build_get_req(url, data, headers=None, proxy_host=None, proxy_port=None):
     return tornado.httpclient.HTTPRequest(
-        url=url + '?' + dtools.urlencode(data) if data else url,
+        url=url + '?' + urllib.parse.urlencode(data) if data else url,
         method='GET',
         headers=tornado.httputil.HTTPHeaders(headers or {}),
         validate_cert=False,
@@ -111,14 +112,14 @@ def get_content_type(filename):
 
 
 def build_url(base_url, params):
-    return base_url + '?' + urllib.urlencode(params)
+    return base_url + '?' + urllib.parse.urlencode(params)
 
 
 def encode_multipart_formdata(fields, files):
     boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
     crlf = '\r\n'
     l = []
-    for key, value in fields.iteritems():
+    for key, value in fields.items():
         l.append('--' + boundary)
         l.append('Content-Disposition: form-data; name="%s"' % key)
         l.append('')

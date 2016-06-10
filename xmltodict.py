@@ -1,14 +1,10 @@
 # -*- coding:utf8 -*-
 
+from collections import OrderedDict
+from io import StringIO
 from xml.parsers import expat
 from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesImpl
-
-from cStringIO import StringIO
-from collections import OrderedDict
-
-_basestring = basestring
-_unicode = unicode
 
 
 class ParsingInterrupted(Exception):
@@ -71,9 +67,7 @@ class _DictSAXHandler(object):
         if len(self.path) > self.item_depth:
             self.stack.append((self.item, self.data))
             if self.xml_attribs:
-                attrs = self.dict_constructor(
-                    (self.attr_prefix + key, value)
-                    for key, value in attrs.iteritems())
+                attrs = self.dict_constructor((self.attr_prefix + key, value) for key, value in attrs.items())
             else:
                 attrs = None
             self.item = attrs or None
@@ -160,8 +154,8 @@ def parse(xml_input, encoding='utf-8', process_namespaces=False, namespace_separ
         ...   <b>1</b>
         ...   <b>2</b>
         ... </a>\"\"\", item_depth=2, item_callback=handle)
-        path:[(u'a', {u'prop': u'x'}), (u'b', None)] item:1
-        path:[(u'a', {u'prop': u'x'}), (u'b', None)] item:2
+        path:[('a', {'prop': 'x'}), ('b', None)] item:1
+        path:[('a', {'prop': 'x'}), ('b', None)] item:2
 
     The optional argument `postprocessor` is a function that takes `path`, `key`
     and `value` as positional arguments and returns a new `(key, value)` pair
@@ -175,14 +169,14 @@ def parse(xml_input, encoding='utf-8', process_namespaces=False, namespace_separ
         xmltodict.parse('<a><b>1</b><b>2</b><b>x</b></a>',
         ...              postprocessor=postprocessor)
 
-        OrderedDict([(u'a', OrderedDict([(u'b:int', [1, 2]), (u'b', u'x')]))])
+        OrderedDict([('a', OrderedDict([('b:int', [1, 2]), ('b', 'x')]))])
 
     You can pass an alternate version of `expat` (such as `defusedexpat`) by
     using the `expat` parameter. E.g:
 
         import defusedexpat
         xmltodict.parse('<a>hello</a>', expat=defusedexpat.pyexpat)
-        OrderedDict([(u'a', u'hello')])
+        OrderedDict([('a', 'hello')])
 
     """
     handler = _DictSAXHandler(namespace_separator=namespace_separator, **kwargs)
@@ -198,12 +192,7 @@ def parse(xml_input, encoding='utf-8', process_namespaces=False, namespace_separ
     parser.StartElementHandler = handler.start_element
     parser.EndElementHandler = handler.end_element
     parser.CharacterDataHandler = handler.characters
-    try:
-        parser.ParseFile(xml_input)
-    except (TypeError, AttributeError):
-        if isinstance(xml_input, _unicode):
-            xml_input = xml_input.encode(encoding)
-        parser.Parse(xml_input, True)
+    parser.Parse(xml_input, True)
     return handler.item
 
 
@@ -228,13 +217,13 @@ def _emit(key, value, content_handler,
         if v is None:
             v = OrderedDict()
         elif not isinstance(v, dict):
-            v = _unicode(v)
-        if isinstance(v, _basestring):
+            v = str(v)
+        if isinstance(v, str):
             v = OrderedDict(((cdata_key, v),))
         cdata = None
         attrs = OrderedDict()
         children = []
-        for ik, iv in v.iteritems():
+        for ik, iv in v.items():
             if ik == cdata_key:
                 cdata = iv
                 continue
