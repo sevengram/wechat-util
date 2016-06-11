@@ -15,16 +15,16 @@ from util import dtools
 user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.143 Safari/537.36'
 
 type_methods = {
-    'json': json.dumps,
+    'json': lambda s: json.dumps(s, ensure_ascii=False),
     'xml': dtools.dict2xml,
     'form': urllib.parse.urlencode,
-    'raw': lambda a: a
+    'raw': lambda s: s
 }
 
 
 def build_get_req(url, data, headers=None, proxy_host=None, proxy_port=None):
     return tornado.httpclient.HTTPRequest(
-        url=url + '?' + urllib.parse.urlencode(data) if data else url,
+        url=build_url(url, data),
         method='GET',
         headers=tornado.httputil.HTTPHeaders(headers or {}),
         validate_cert=False,
@@ -112,7 +112,7 @@ def get_content_type(filename):
 
 
 def build_url(base_url, params):
-    return base_url + '?' + urllib.parse.urlencode(params)
+    return (base_url + '?' + urllib.parse.urlencode(params)) if params else base_url
 
 
 def encode_multipart_formdata(fields, files):
