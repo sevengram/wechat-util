@@ -72,7 +72,6 @@ class PKCS7Encoder(object):
         @param text: 需要进行填充补位操作的明文
         @return: 补齐明文字符串
         """
-        text = text.encode('utf8')
         text_length = len(text)
         # 计算需要填充的位数
         amount_to_pad = self.block_size - (text_length % self.block_size)
@@ -110,7 +109,8 @@ class Prpcrypt(object):
         @return: 加密得到的字符串
         """
         # 16位随机字符串添加到明文开头
-        text = self.get_random_str() + struct.pack("I", socket.htonl(len(text))).decode('utf8') + text + appid
+        text = text.encode('utf8')
+        text = self._get_random_bytes() + struct.pack("I", socket.htonl(len(text))) + text + appid.encode('utf8')
         # 使用自定义的填充方式对明文进行补位填充
         pkcs7 = PKCS7Encoder()
         text = pkcs7.encode(text)
@@ -135,17 +135,16 @@ class Prpcrypt(object):
         # 去除16位随机字符串
         content = plain_text[16:-pad]
         xml_len = socket.ntohl(struct.unpack("I", content[:4])[0])
-        content = content[4:].decode('utf8')
-        xml_content = content[0: xml_len]
-        from_appid = content[xml_len:]
+        xml_content = content[4: 4 + xml_len].decode('utf8')
+        from_appid = content[4 + xml_len:].decode('utf8')
         if from_appid != appid:
             return None
         return xml_content
 
-    def get_random_str(self):
+    def _get_random_bytes(self):
         """
         随机生成16位字符串
         @return: 16位字符串
         """
         rule = string.ascii_letters + string.digits
-        return "".join(random.sample(rule, 16))
+        return "".join(random.sample(rule, 16)).encode('utf8')
