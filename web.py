@@ -7,7 +7,7 @@ from util import security
 
 
 class BaseHandler(tornado.web.RequestHandler):
-    def initialize(self, sign_check=True):
+    def initialize(self, sign_check=True, *args, **kwargs):
         self.sign_check = sign_check
 
     def assign_arguments(self, essential, extra=None):

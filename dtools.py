@@ -32,3 +32,10 @@ def xml2dict(xml):
 
 def not_empty(d):
     return d == 0 or bool(d)
+
+
+def none_to_empty_str(d):
+    if type(d) is dict:
+        for k, v in d.items():
+            if v is None:
+                d[k] = ''
