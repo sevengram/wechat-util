@@ -56,6 +56,7 @@ class Sqldb(object):
             return list(result or '')
 
     def get(self, table, queries, select_key='*'):
+        queries = queries or {}
         queries = {k: v for k, v in queries.items() if not_empty(v)}
         if not queries:
             return None
@@ -68,6 +69,7 @@ class Sqldb(object):
             return records if select_key == '*' else records.get(select_key)
 
     def get_page_list(self, table, queries, page_no, page_size, select_key='*'):
+        queries = queries or {}
         equal_queries = {k: v for k, v in queries.items() if
                          not_empty(v) and type(v) is not tuple and type(v) is not list}
         open_range_queries = {k: v for k, v in queries.items() if type(v) is tuple and len(v) == 2}
@@ -85,7 +87,7 @@ class Sqldb(object):
         total = records['total'] if records else 0
         if total:
             request = 'SELECT %s FROM %s %s LIMIT %s,%s' % (
-                select_key, table, where_clause, page_no * page_size, page_size)
+                select_key, table, where_clause, (page_no - 1) * page_size, page_size)
             return total, self.fetch_all(request, values)
         else:
             return 0, []
