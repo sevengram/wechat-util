@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from itertools import chain
-
 import pymysql
 
 from util.dtools import not_empty
@@ -43,13 +41,13 @@ class Sqldb(object):
         cursor = self.connection.cursor(cursorclass)
         result = None
         try:
-            cursor.execute(query, args)
+            cursor.execute(query, list(args))
             result = cursor.fetchall()
         except (AttributeError, pymysql.OperationalError):
             self.connection.close()
             self.connect()
             cursor = self.connection.cursor(cursorclass)
-            cursor.execute(query, args)
+            cursor.execute(query, list(args))
             result = cursor.fetchall()
         finally:
             cursor.close()
@@ -58,15 +56,22 @@ class Sqldb(object):
     def get(self, table, queries, select_key='*'):
         queries = queries or {}
         queries = {k: v for k, v in queries.items() if not_empty(v)}
-        if not queries:
-            return None
-        placeholders = ' AND '.join(map(lambda n: n + '=%s', queries.keys()))
-        request = 'SELECT %s FROM %s WHERE %s' % (select_key, table, placeholders)
+        where_clause = (' WHERE ' + ' AND '.join(map(lambda n: n + '=%s', queries.keys()))) if queries else ''
+        request = 'SELECT %s FROM %s %s LIMIT 1' % (select_key, table, where_clause)
         records = self.execute(request, queries.values())
         if not records:
             return None
         else:
             return records if select_key == '*' else records.get(select_key)
+
+    def get_left_join(self, table, joins, queries, select_key='*'):
+        queries = queries or {}
+        queries = {k: v for k, v in queries.items() if not_empty(v)}
+        where_clause = (' WHERE ' + ' AND '.join(map(lambda n: n + '=%s', queries.keys()))) if queries else ''
+        join_clause = ''.join([' LEFT JOIN %s ON %s.%s = %s.%s ' % (j[1], table, j[0], j[1], j[2]) for j in joins])
+        request = 'SELECT %s FROM %s %s %s' % (
+            select_key, table, join_clause, where_clause)
+        return self.fetch_all(request, queries.values())
 
     def get_page_list(self, table, queries, page_no, page_size, select_key='*'):
         queries = queries or {}
@@ -78,16 +83,16 @@ class Sqldb(object):
             list(map(lambda k: k + '=%s', equal_queries.keys())) + \
             list(map(lambda k: '%s < ' + k + ' AND ' + k + ' < %s', open_range_queries.keys())) + \
             list(map(lambda k: '%s <= ' + k + ' AND ' + k + ' <= %s', close_range_queries.keys()))
-        placeholders = ' AND '.join(conditions)
-        where_clause = ' WHERE ' + placeholders if placeholders else ''
-        values = list(equal_queries.values()) + list(
-            chain.from_iterable(list(open_range_queries.values()) + list(close_range_queries.values())))
+        where_clause = (' WHERE ' + ' AND '.join(conditions)) if conditions else ''
+        values = list(equal_queries.values()) + list(open_range_queries.values()) + list(close_range_queries.values())
         count_request = 'SELECT count(1) AS total FROM %s %s' % (table, where_clause)
         records = self.execute(count_request, values)
         total = records['total'] if records else 0
         if total:
-            request = 'SELECT %s FROM %s %s LIMIT %s,%s' % (
-                select_key, table, where_clause, (page_no - 1) * page_size, page_size)
+            limit_clause = ' LIMIT %s,%s ' % (
+                (page_no - 1) * page_size, page_size) if page_no > 0 and page_size > 0 else ''
+            request = 'SELECT %s FROM %s %s %s' % (
+                select_key, table, where_clause, limit_clause)
             return total, self.fetch_all(request, values)
         else:
             return 0, []
