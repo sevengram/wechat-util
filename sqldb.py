@@ -114,6 +114,15 @@ class Sqldb(object):
             request = 'UPDATE %s SET %s WHERE %s' % (table, update_holders, where_holders)
             self.execute(request, list(update_dict.values()) + list(where_dict.values()), commit=True)
 
+    def insert(self, table, data, noninsert=None):
+        insert_dict = {k: v for k, v in data.items()
+                       if not_empty(v) and k not in (noninsert or [])}
+        columns = ', '.join(insert_dict.keys())
+        insert_holders = ', '.join(['%s'] * len(insert_dict))
+        request = 'INSERT INTO %s (%s) VALUES (%s)' % (
+            table, columns, insert_holders)
+        self.execute(request, list(insert_dict.values()), commit=True)
+
     def replace(self, table, data, noninsert=None, nonupdate=None):
         insert_dict = {k: v for k, v in data.items()
                        if not_empty(v) and k not in (noninsert or [])}
