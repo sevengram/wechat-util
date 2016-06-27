@@ -10,6 +10,9 @@ class BaseHandler(tornado.web.RequestHandler):
     def initialize(self, sign_check=True, *args, **kwargs):
         self.sign_check = sign_check
 
+    def get_all_arguments(self):
+        return {k: v[0].decode('utf8') for k, v in self.request.arguments.items()}
+
     def assign_arguments(self, essential, extra=None):
         try:
             r1 = {key: self.get_argument(key) for key in essential}
