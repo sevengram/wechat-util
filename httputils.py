@@ -117,7 +117,6 @@ def build_url(base_url, params):
 
 def encode_multipart_formdata(fields, files):
     boundary = '----------ThIs_Is_tHe_bouNdaRY_$'
-    crlf = '\r\n'
     l = []
     for key, value in fields.items():
         l.append('--' + boundary)
@@ -132,6 +131,6 @@ def encode_multipart_formdata(fields, files):
     l.append(value)
     l.append('--' + boundary + '--')
     l.append('')
-    body = crlf.join(l)
+    body = b'\r\n'.join([s.encode('utf8') if type(s) is str else s for s in l])
     content_type = 'multipart/form-data; boundary=%s' % boundary
     return content_type, body
